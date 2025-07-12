@@ -1,0 +1,28 @@
+[project]
+name = "symboliccomputation"
+version = "0.1.0"
+description = "A little Python package involving symbolic mathematics"
+authors = [
+    {name = "Nicholas Gaubatz"}
+]
+license = {text = "MIT"}
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+]
+
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+
+[tool.ruff.lint]
+select = ["ALL"]
+ignore = [
+    "D203", # No blank line between class definition and docstring
+    "D213", # Put first line of docstring on same line as first triple quotes
+    "D413", # No blank line after last section of docstring
+    "S311", # Standard pseudo-random generators are ok, since we're not doing cryptography
+    "T201", # Print statements are ok
+]
