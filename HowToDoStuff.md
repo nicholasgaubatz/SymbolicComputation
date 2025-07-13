@@ -41,3 +41,10 @@ To add a dependency,
 
 To add a requirements.txt file,
 > poetry export --output requirements.txt
+
+To run pytest,
+> poetry run pytest
+
+##### Installing the symboliccomputation package
+
+> pip install -e .
