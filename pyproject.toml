@@ -9,6 +9,7 @@ license = {text = "MIT"}
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
+    "ruff (>=0.12.3,<0.13.0)"
 ]
 
 
@@ -17,12 +18,37 @@ requires = ["poetry-core>=2.0.0,<3.0.0"]
 build-backend = "poetry.core.masonry.api"
 
 
+[tool.poetry]
+name = "symboliccomputation"
+version = "0.1.0"
+
+
+[[tool.poetry.packages]]
+include = "symboliccomputation"
+from = "src"
+
+
 [tool.ruff.lint]
 select = ["ALL"]
 ignore = [
+    "D104", # No docstring in public package is ok
     "D203", # No blank line between class definition and docstring
     "D213", # Put first line of docstring on same line as first triple quotes
     "D413", # No blank line after last section of docstring
+    "FIX002", # TODO statements are ok
     "S311", # Standard pseudo-random generators are ok, since we're not doing cryptography
     "T201", # Print statements are ok
 ]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = [
+    "S101", # Assertions allowed in test files
+]
+
+[tool.ruff.lint.isort]
+known-first-party = [
+    "symboliccomputation"
+]
+
+[tool.pytest.ini_options]
+pythonpath = ["src/"]
