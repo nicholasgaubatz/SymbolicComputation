@@ -45,6 +45,13 @@ To add a requirements.txt file,
 To run pytest,
 > poetry run pytest
 
-##### Installing the symboliccomputation package
+##### Installing and using the symboliccomputation package
 
 > pip install -e .
+
+To use, do
+> python3
+from the virtual environment.
+
+Lastly, to import a class from the package, do something like
+>>> from symboliccomputation import Monomial

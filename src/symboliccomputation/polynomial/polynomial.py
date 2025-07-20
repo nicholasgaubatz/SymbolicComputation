@@ -11,7 +11,10 @@ from symboliccomputation.indeterminate import Indeterminate
 class Monomial:
     """A monomial, like '-3*x^2*y^2'."""
 
-    MONOMIAL_REGEX = re.compile(r"^-?\d*(\.\d+)?([a-z]+(\^[1-9]\d*)?)?(\*[a-z]+(\^[1-9]\d*)?)*$") # noqa: E501
+    # TODO(Nicholas): Monomial order comparisons given ordering, option to print
+    # using given ordering,
+
+    MONOMIAL_REGEX = re.compile(r"^(-\d+)?\d*(\.\d+)?([a-z]+(\^[1-9]\d*)?)?(\*[a-z]+(\^[1-9]\d*)?)*$") # noqa: E501
 
     coefficient: np.int64 | np.float64 # Only real numbers allowed right now
     weight_dict: dict[Indeterminate, np.int64]
@@ -81,16 +84,58 @@ class Monomial:
             bool: Whether the monomial string is valid.
         """
         return bool(cls.MONOMIAL_REGEX.match(monomial))
+    
+    
+    # See https://stackoverflow.com/questions/2909106/whats-a-correct-and-good-way-to-implement-hash # noqa:
+    def __key(self):
+        """The unique key of a Monomial instance."""
+        return (self.coefficient,
+                tuple(sorted(self.weight_dict.items())))
+    
+    
+    def __eq__(self, other: object) -> bool:
+        """To test equality of two monomials."""
+        if not isinstance(other, Monomial):
+            return NotImplemented
+        return self.__key() == other.__key()
+    
+
+    def __hash__(self) -> int:
+        """To use this class in a set, need to be able to compute a hash."""
+        return hash((self.coefficient, tuple(sorted(self.weight_dict.items()))))
+    
+
+    def __repr__(self) -> str:
+        """Produce a string representation of the object.
+        
+        Details: If the Monomial has coefficient 1, it either just prints "1.0" or
+        omits the coefficient, depending on whether the Monomial has any
+        indeterminates. If an exponent is 1, it omits the exponent.
+        """
+        if np.float64(self.coefficient) == np.float64(1):
+            if not self.weight_dict:
+                return "1.0"
+            monomial_string_list = []
+        else:
+            monomial_string_list = [str(self.coefficient)]
+
+        for indeterminate, exponent in self.weight_dict.items():
+            if np.float64(exponent) == np.float64(1):
+                monomial_string_list.append(indeterminate.name)
+            else:
+                monomial_string_list.append(f"{indeterminate.name}^{exponent}")
+
+        return "*".join(monomial_string_list)
 
 
 class Polynomial:
     """A polynomial.
 
-    Like f(x, y) = x^2 + 3xy - 2, writen as 'f(x,y) = x^2 + 3*x*y - 2'.
+    Like f(x, y) = x^2 + 3xy - 2, writen as 'x^2 + 3*x*y - 2'.
     """
 
-    indeterminates: list[Indeterminate]
-    monomials: list[Monomial]
+    indeterminates: set[Indeterminate]
+    monomials: set[Monomial]
 
     def __init__(self, poly: str) -> None:
         """Initialize an instance of the Polynomial class.
@@ -103,9 +148,53 @@ class Polynomial:
         Args:
             poly (str): The polynomial desired, written like 'f(x,y) = x^2 + 3*x*y - 2.'
         """
-        # TODO(Nicholas): write docstring, check that all indeterminates are actually
-        # indeterminates, write attributes like indeterminates contained,
+        # TODO(Nicholas): write docstring,
         # write operations like add, scalar multiply, multiply (big one), derivative,
-        # integral, find roots if univariate. A bigger goal is to make this also
+        # integral, find roots if univariate. LONG-TERM: IDEAL, GROEBNER BASIS
+        # A possible big goal is to make this also
         # able to handle matrices instead of determinates.
         # 001
+        poly_split_by_spaces = poly.split(" ")
+        self.monomials = set()
+
+        # Test whether input string is valid.
+        for i in range(len(poly_split_by_spaces)):
+            token = poly_split_by_spaces[i]
+            # Test whether all tokens are "+", "-", or a valid monomial.
+            if token not in {"+", "-"} and not Monomial.is_valid_monomial_regex(token):
+                value_error_msg = f"Invalid input: token '{token}'!"
+                raise ValueError(value_error_msg)
+            # Test that "+"/"-" and Monomial instances alternate.
+            if i < len(poly_split_by_spaces)-1:
+                token_1 = poly_split_by_spaces[i+1]
+                if (token in {"+", "-"} and token_1 in {"+", "-"}) \
+                or (Monomial.is_valid_monomial_regex(token) and \
+                Monomial.is_valid_monomial_regex(token_1)):
+                    value_error_msg = f"Invalid sequential tokens: {token}, {token_1}!"
+                    raise ValueError(value_error_msg)
+
+        # Create list of monomials.
+        negate_next_monomial = False
+        while len(poly_split_by_spaces) > 0:
+            current_token = poly_split_by_spaces.pop(0)
+            if current_token == "+":
+                negate_next_monomial = False
+                continue
+            if current_token == "-":
+                negate_next_monomial = True
+                # poly_split_by_spaces[0] = "-" + poly_split_by_spaces[0]
+            elif Monomial.is_valid_monomial_regex(current_token):
+                current_monomial = Monomial(monomial=current_token)
+                if negate_next_monomial:
+                    current_monomial.coefficient *= -1.
+                self.monomials.add(current_monomial)
+                negate_next_monomial = False
+            else:
+                value_error_msg = "Issue with code: all cases should have been checked."
+                raise ValueError(value_error_msg)
+
+        # Create easily accessible list of the polynomial's indeterminates.
+        self.indeterminates = set()
+        for monomial in self.monomials:
+            self.indeterminates.update(monomial.weight_dict.keys())
+        self.indeterminates = set(self.indeterminates)

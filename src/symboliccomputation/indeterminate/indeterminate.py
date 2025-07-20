@@ -1,5 +1,8 @@
+from dataclasses import dataclass
+
 """A way to store indeterminates, or the atoms of this package."""
 
+@dataclass(frozen=True, order=True)
 class Indeterminate:
     """An indeterminate.
 
@@ -9,20 +12,20 @@ class Indeterminate:
 
     name: str = "x"
 
-    def __init__(self, name: str) -> None:
-        """Initialize an instance of the Indeterminate class.
-
-        Args:
-            name (str): _description_
-        """
-        self.name = name
-
-    def __hash__(self) -> int:
-        """To use this class as a dict key, need to be able to compute a hash."""
-        return hash(self.name)
-
-    def __eq__(self, other: object) -> bool:
-        """To test equality of two indeterminates."""
-        if not isinstance(other, Indeterminate):
-            return NotImplemented
-        return self.name == other.name
+    #def __init__(self, name: str) -> None:
+    #    """Initialize an instance of the Indeterminate class.
+#
+    #    Args:
+    #        name (str): _description_
+    #    """
+    #    self.name = name
+#
+    #def __hash__(self) -> int:
+    #    """To use this class as a dict key, need to be able to compute a hash."""
+    #    return hash(self.name)
+#
+    #def __eq__(self, other: object) -> bool:
+    #    """To test equality of two indeterminates."""
+    #    if not isinstance(other, Indeterminate):
+    #        return NotImplemented
+    #    return self.name == other.name

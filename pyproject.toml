@@ -37,6 +37,7 @@ ignore = [
     "D213", # Put first line of docstring on same line as first triple quotes
     "D413", # No blank line after last section of docstring
     "FIX002", # TODO statements are ok
+    "S105", # Possible hardcoded passwords are ok here
     "S311", # Standard pseudo-random generators are ok, since we're not doing cryptography
     "T201", # Print statements are ok
 ]
