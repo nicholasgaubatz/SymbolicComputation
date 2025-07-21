@@ -8,7 +8,6 @@ import pytest
 from symboliccomputation.indeterminate import Indeterminate
 from symboliccomputation.polynomial import Monomial, Polynomial
 
-
 ####################################
 # Monomials
 ####################################
@@ -56,7 +55,7 @@ def test_invalid_monomial_regex(invalid_monomial_regex: list[str]) -> None:
     "x^(1)",
     "x^-1",
     "x^0",
-    "-"
+    "-",
 ])
 def test_invalid_monomials(invalid_monomial: list[str]) -> None:
     """Tests some invalid monomial regular expressions in the Monomial class itself."""
@@ -142,6 +141,22 @@ def test_monomial_repr(monomial: list[str],
     assert current_monomial.__repr__() == monomial_str_repr
 
 
+@pytest.mark.parametrize(argnames=("monomial_1", "monomial_2", "exp_monomial_prod"),
+                         argvalues=[
+    (Monomial("0"), Monomial("0.0"), Monomial("0")),
+    (Monomial("0"), Monomial("2"), Monomial("0.0")),
+    (Monomial("x"), Monomial("0.0"), Monomial("0")),
+    (Monomial("x"), Monomial("y"), Monomial("x*y")),
+    (Monomial("x"), Monomial("2*y"), Monomial("2*x*y")),
+    (Monomial("-3.0*asdf"), Monomial("9*asdf"), Monomial("-27*asdf^2")),
+])
+def test_monomial_mul(monomial_1: list[Monomial],
+                      monomial_2: list[Monomial],
+                      exp_monomial_prod: list[Monomial]) -> None:
+    """Tests some Monomial multiplications."""
+    assert monomial_1 * monomial_2 == exp_monomial_prod
+
+
 ####################################
 # Polynomials
 ####################################
@@ -156,8 +171,11 @@ def test_monomial_repr(monomial: list[str],
     ("x^-1", "Invalid input: token 'x^-1'!"),
     ("x^0", "Invalid input: token 'x^0'!"),
     ("x ++ y", "Invalid input: token '++'!"),
-    ("x y", "Invalid sequential tokens: x, y!")
-    # ("", "Invalid input: token ''!"),
+    ("x y", "Invalid sequential tokens: x, y!"),
+    ("x + x", "Invalid input: repeated monomials x, x!"),
+    ("x + 1.0*x", "Invalid input: repeated monomials x, x!"),
+    ("x + y + x*y + x*y*z - 12345*x",
+     "Invalid input: repeated monomials x, -12345.0*x!"),
 ])
 def test_invalid_polynomials(invalid_polynomial: list[str],
                              exp_error_msg: list[str]) -> None:
@@ -191,8 +209,11 @@ def test_invalid_polynomials(invalid_polynomial: list[str],
     ("-5*y^321*z^8*x^3",
      {Indeterminate("x"), Indeterminate("y"), Indeterminate("z")},
      {Monomial("-5*y^321*z^8*x^3")}),
+     ("3*x + 4.0*x*y - 8*y + 12",
+      {Indeterminate("x"), Indeterminate("y")},
+      {Monomial("3*x"), Monomial("4.0*x*y"), Monomial("-8*y"), Monomial("12")}),
 ])
-def test_valid_monomial(valid_polynomial: list[str],
+def test_valid_polynomial(valid_polynomial: list[str],
                         exp_indeterminates: set[Indeterminate],
                         exp_monomials: set[Monomial]) -> None:
     """Tests some valid monomial regular expressions."""
@@ -201,3 +222,70 @@ def test_valid_monomial(valid_polynomial: list[str],
     assert current_polynomial.indeterminates == exp_indeterminates
     # Assert monomials are correct.
     assert current_polynomial.monomials == exp_monomials
+
+
+@pytest.mark.parametrize(argnames=("polynomial_1",
+                                   "polynomial_2",
+                                   "exp_polynomial_sum"),
+                         argvalues=[
+    ("0", "0.0", Polynomial("0")),
+    ("1.0", "1", Polynomial("2")),
+    ("-2.5", "2", Polynomial("-0.5")),
+    ("x", "y", Polynomial("x + y")),
+    ("x", "-1*y", Polynomial("x - y")),
+    ("x", "-1*x", Polynomial("0")),
+    ("2*x^2 + x*y",
+     "3*x^3*y - 2*x^2 + 2.1*x*y - 8",
+     Polynomial("3.1*x*y + 3*x^3*y - 8")),
+])
+def test_polynomial_sum(polynomial_1: list[str],
+                        polynomial_2: list[str],
+                        exp_polynomial_sum: list[Polynomial]) -> None:
+    """Tests sums of polynomials."""
+    assert Polynomial(polynomial_1) + Polynomial(polynomial_2) == exp_polynomial_sum
+
+
+@pytest.mark.parametrize(argnames=("polynomial_1",
+                                   "polynomial_2",
+                                   "exp_polynomial_diff"),
+                         argvalues=[
+    ("0", "0.0", Polynomial("0")),
+    ("1.0", "1", Polynomial("0")),
+    ("-2.5", "2", Polynomial("-4.5")),
+    ("x", "y", Polynomial("x - y")),
+    ("x", "-1*y", Polynomial("x + y")),
+    ("x", "-1*x", Polynomial("2*x")),
+    ("x", "1.0*x", Polynomial("0")),
+    ("2*x^2 + x*y",
+     "3*x^3*y + 2*x^2 + 2.1*x*y - 8",
+     Polynomial("-1.1*x*y + -3*x^3*y + 8")),
+])
+def test_polynomial_diff(polynomial_1: list[str],
+                        polynomial_2: list[str],
+                        exp_polynomial_diff: list[Polynomial]) -> None:
+    """Tests differences of polynomials."""
+    assert Polynomial(polynomial_1) - Polynomial(polynomial_2) == exp_polynomial_diff
+
+
+@pytest.mark.parametrize(argnames=("polynomial_1",
+                                   "polynomial_2",
+                                   "exp_polynomial_prod"),
+                         argvalues=[
+    (Polynomial("0"), Polynomial("0.0"), Polynomial("0")),
+    (Polynomial("0"), Polynomial("2"), Polynomial("0.0")),
+    (Polynomial("x"), Polynomial("0.0"), Polynomial("0")),
+    (Polynomial("x"), Polynomial("y"), Polynomial("x*y")),
+    (Polynomial("x"), Polynomial("2*y"), Polynomial("2*x*y")),
+    (Polynomial("-3.0*asdf"), Polynomial("9*asdf"), Polynomial("-27*asdf^2")),
+    (Polynomial("x + y"), Polynomial("x - y"), Polynomial("x^2 - y^2")),
+    (Polynomial("x + y"), Polynomial("x + y"), Polynomial("x^2 + 2*x*y + y^2")),
+    (0, Polynomial("x + y"), Polynomial("0")),
+    (1, Polynomial("-3.0*asdf"), Polynomial("-3*asdf")),
+    (1, Polynomial("-3.0*asdf"), Polynomial("-3.0*asdf")),
+    (-2, Polynomial("8*x + 9*y - 10*x*y"), Polynomial("-16.0*x - 18*y + 20*x*y")),
+])
+def test_polynomial_mul(polynomial_1: list[Polynomial | int | float],
+                      polynomial_2: list[Polynomial],
+                      exp_polynomial_prod: list[Polynomial]) -> None:
+    """Tests some Polynomial multiplications and left scalar Polynomial mults."""
+    assert polynomial_1 * polynomial_2 == exp_polynomial_prod

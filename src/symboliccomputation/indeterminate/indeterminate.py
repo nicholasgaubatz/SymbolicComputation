@@ -1,6 +1,8 @@
+"""A way to store indeterminates, or the atoms of this package."""
+
+import re
 from dataclasses import dataclass
 
-"""A way to store indeterminates, or the atoms of this package."""
 
 @dataclass(frozen=True, order=True)
 class Indeterminate:
@@ -12,20 +14,12 @@ class Indeterminate:
 
     name: str = "x"
 
-    #def __init__(self, name: str) -> None:
-    #    """Initialize an instance of the Indeterminate class.
-#
-    #    Args:
-    #        name (str): _description_
-    #    """
-    #    self.name = name
-#
-    #def __hash__(self) -> int:
-    #    """To use this class as a dict key, need to be able to compute a hash."""
-    #    return hash(self.name)
-#
-    #def __eq__(self, other: object) -> bool:
-    #    """To test equality of two indeterminates."""
-    #    if not isinstance(other, Indeterminate):
-    #        return NotImplemented
-    #    return self.name == other.name
+    def __post_init__(self) -> None:
+        """Ban indeterminate names from starting with numbers.
+
+        This has the effect of banning monomials initialized like '12345x' (correct
+        initialization string would be '12345*x').
+        """
+        if re.match(r"^\d", self.name):
+            value_error_msg = f"Invalid name '{self.name}': must not start w/ digit."
+            raise ValueError(value_error_msg)
