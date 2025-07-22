@@ -68,7 +68,6 @@ class Monomial:
         self.weight_dict = {Indeterminate(elt[0]): np.int64(elt[1])
                               for elt in monomial_fully_split_ones_added}
 
-
     @classmethod
     def is_valid_monomial_regex(cls: Self, monomial: str) -> bool:
         """Test whether a monomial string is valid.
@@ -86,13 +85,11 @@ class Monomial:
         """
         return bool(cls.MONOMIAL_REGEX.match(monomial))
 
-
     # See https://stackoverflow.com/questions/2909106/whats-a-correct-and-good-way-to-implement-hash # noqa: E501
     def __key(self) -> tuple[np.float64, tuple[np.int64]]:
         """Get a unique key of a Monomial instance."""
         return (self.coefficient,
                 tuple(sorted(self.weight_dict.items())))
-
 
     def __eq__(self, other: object) -> bool:
         """To test equality of two monomials."""
@@ -100,11 +97,9 @@ class Monomial:
             return NotImplemented
         return self.__key() == other.__key()
 
-
     def __hash__(self) -> int:
         """To use this class in a set, need to be able to compute a hash."""
         return hash((self.coefficient, tuple(sorted(self.weight_dict.items()))))
-
 
     def __repr__(self) -> str:
         """Produce a string representation of the object.
@@ -128,7 +123,6 @@ class Monomial:
 
         return "*".join(monomial_string_list)
 
-
     def __mul__(self, other: object) -> Self:
         """Multiply two Monomials by essentially adding their weight_dicts."""
         if not isinstance(other, Monomial):
@@ -151,6 +145,33 @@ class Monomial:
 
         return new_monomial
 
+    def derivative(self, wrt: str | Indeterminate) -> Self:
+        """Take the derivative of the monomial with respect to an indeterminate.
+
+        Args:
+            wrt (str | Indeterminate): The indeterminate to take the derivative
+                w.r.t., either the name or the Indeterminate itself.
+
+        Returns:
+            Self: A new Monomial consisting of the derivative.
+        """
+        if isinstance(wrt, str):
+            wrt = Indeterminate(wrt)
+
+        # If wrt doesn't show up in the monomial's indeterminate list, simply return 0.
+        if wrt not in set(self.weight_dict.keys()):
+            return Monomial("0")
+
+        exponent = self.weight_dict[wrt]
+        new_monomial = Monomial("0")
+        new_monomial.coefficient = self.coefficient * exponent
+        new_monomial.weight_dict = self.weight_dict
+        new_monomial.weight_dict[wrt] -= 1
+        if new_monomial.weight_dict[wrt] == 0:
+            del new_monomial.weight_dict[wrt]
+
+        return new_monomial
+
 
 class Polynomial:
     """A polynomial.
@@ -159,8 +180,8 @@ class Polynomial:
     """
 
     # TODO(Nicholas): write docstring,
-        # write operations like scalar multiply, derivative,
-        # integral, find roots if univariate. LONG-TERM: IDEAL, GROEBNER BASIS
+        # write operations like integral (need to implement fractions and irrationals!)
+        # find roots if univariate. LONG-TERM: IDEAL, GROEBNER BASIS
         # A possible big goal is to make this also
         # able to handle matrices instead of determinates.
         # 001
@@ -251,7 +272,6 @@ class Polynomial:
         for monomial in self.monomials:
             self.indeterminates.update(monomial.weight_dict.keys())
 
-
     def __eq__(self, other: object) -> bool:
         """Test equality of two polynomials.
 
@@ -262,11 +282,16 @@ class Polynomial:
 
         return self.monomials == other.monomials
 
-
     def __hash__(self) -> int:
         """To use this class in a set, need to be able to compute a hash."""
         return hash((self.indeterminates, self.monomials))
 
+    def __repr__(self) -> str:
+        """Produce a string representation of the object.
+
+        Details: Simply prints the sum of all monomials of the polynomial.
+        """
+        return " + ".join([m.__repr__() for m in self.monomials])
 
     def __add__(self, other: object) -> Self:
         """Add two polynomials, regardless of their indeterminates."""
@@ -282,7 +307,6 @@ class Polynomial:
 
         return Polynomial(final_monomial_set)
 
-
     def __sub__(self, other: object) -> Self:
         """Subtract two polynomials."""
         if not isinstance(other, Polynomial):
@@ -293,7 +317,6 @@ class Polynomial:
             m.coefficient *= -1
 
         return self + other
-
 
     def __mul__(self, other: object) -> Self:
         """Multiply two polynomials."""
@@ -306,7 +329,6 @@ class Polynomial:
 
         return Polynomial(final_monomial_set)
 
-
     def __rmul__(self, other: object) -> Self:
         """Handle left scalar multiplication."""
         if type(other) not in {int, float, np.int64, np.float64}:
@@ -314,10 +336,34 @@ class Polynomial:
 
         return Polynomial(str(other)) * self
 
+    def derivative(self, wrt: str | Indeterminate) -> Self:
+        """Take the derivative of the polynomial with respect to an indeterminate.
+
+        Args:
+            wrt (str | Indeterminate): The indeterminate to take the derivative w.r.t.
+
+        Returns:
+            Self: A new Polynomial consisting of the derivative.
+        """
+        if isinstance(wrt, str):
+            wrt = Indeterminate(wrt)
+
+        # If wrt doesn't show up in the polynomial's indeterminate list, simply return 0
+        if wrt not in self.indeterminates:
+            return Polynomial("0")
+
+        new_monomial_set = set()
+
+        for m in self.monomials:
+            m_prime = m.derivative(wrt=wrt)
+            if m_prime != Monomial("0"):
+                new_monomial_set.add(m_prime)
+
+        return Polynomial(new_monomial_set)
 
     @classmethod
     def _consolidate_monomial_list(cls, monomial_list: list[Monomial]) -> set[Monomial]:
-        """Add monomials with equal weight vectors. Internal method.
+        """Add monomials with equal weight vectors. Class method.
 
         Args:
             monomial_list (list[Monomial]): List of monomials, possibly with repeat

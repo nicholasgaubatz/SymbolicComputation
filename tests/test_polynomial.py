@@ -8,9 +8,9 @@ import pytest
 from symboliccomputation.indeterminate import Indeterminate
 from symboliccomputation.polynomial import Monomial, Polynomial
 
-####################################
+########################################################################################
 # Monomials
-####################################
+########################################################################################
 
 
 @pytest.mark.parametrize(argnames="valid_monomial_regex", argvalues=[
@@ -157,9 +157,25 @@ def test_monomial_mul(monomial_1: list[Monomial],
     assert monomial_1 * monomial_2 == exp_monomial_prod
 
 
-####################################
+@pytest.mark.parametrize(argnames=("monomial", "wrt", "result"), argvalues=[
+    (Monomial("0"), "x", Monomial("0.0")),
+    (Monomial("1"), Indeterminate("x"), Monomial("0")),
+    (Monomial("x"), "x", Monomial("1")),
+    (Monomial("x"), "y", Monomial("0")),
+    (Monomial("2*asdf"), "asdf", Monomial("2")),
+    (Monomial("-4*x*y"), "x", Monomial("-4*y")),
+    (Monomial("4*x^2*y"), "x", Monomial("8.0*x*y")),
+])
+def test_monomial_derivative(monomial: list[Monomial],
+                             wrt: list[str | Indeterminate],
+                             result: list[Monomial]) -> None:
+    """Tests some Monomial derivatives."""
+    assert monomial.derivative(wrt) == result
+
+
+########################################################################################
 # Polynomials
-####################################
+########################################################################################
 
 
 @pytest.mark.parametrize(argnames=("invalid_polynomial", "exp_error_msg"), argvalues=[
@@ -289,3 +305,26 @@ def test_polynomial_mul(polynomial_1: list[Polynomial | int | float],
                       exp_polynomial_prod: list[Polynomial]) -> None:
     """Tests some Polynomial multiplications and left scalar Polynomial mults."""
     assert polynomial_1 * polynomial_2 == exp_polynomial_prod
+
+
+@pytest.mark.parametrize(argnames=("polynomial", "wrt", "result"), argvalues=[
+    (Polynomial("0"), "x", Polynomial("0.0")),
+    (Polynomial("1"), Indeterminate("x"), Polynomial("0")),
+    (Polynomial("x"), "x", Polynomial("1")),
+    (Polynomial("x"), "y", Polynomial("0")),
+    (Polynomial("2*asdf"), "asdf", Polynomial("2")),
+    (Polynomial("-4*x*y"), "x", Polynomial("-4*y")),
+    (Polynomial("4*x^2*y"), "x", Polynomial("8.0*x*y")),
+    (Polynomial("x + y"), "x", Polynomial("1")),
+    (Polynomial("-1*x + y"), "x", Polynomial("-1")),
+    (Polynomial("x*y + x + y"), "z", Polynomial("0")),
+    (Polynomial("4*wow - 8*wow^2 + 12345*wow^3"),
+     "wow",
+     Polynomial("37035*wow^2 - 16*wow + 4.0")),
+    (Polynomial("4*wow - 8*wow^2 + 12345*wow^3"), "wowza", Polynomial("0")),
+])
+def test_polynomial_derivative(polynomial: list[Polynomial],
+                             wrt: list[str | Indeterminate],
+                             result: list[Polynomial]) -> None:
+    """Tests some Polynomial derivatives."""
+    assert polynomial.derivative(wrt) == result
